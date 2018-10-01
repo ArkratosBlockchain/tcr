@@ -1,13 +1,13 @@
 {
   "paramDefaults": {
-    "minDeposit": 10000000000000000000,
-    "pMinDeposit": 100000000000000000000,
-    "applyStageLength": 600,
-    "pApplyStageLength": 1200,
-    "commitStageLength": 600,
-    "pCommitStageLength": 1200,
-    "revealStageLength": 600,
-    "pRevealStageLength": 1200,
+    "minDeposit": 1,
+    "pMinDeposit": 1,
+    "applyStageLength": 31536000,
+    "pApplyStageLength": 31536000,
+    "commitStageLength": 31536000,
+    "pCommitStageLength": 31536000,
+    "revealStageLength": 31536000,
+    "pRevealStageLength": 31536000,
     "dispensationPct": 50,
     "pDispensationPct": 50,
     "voteQuorum": 50,
@@ -22,15 +22,16 @@
     "decimals": "18",
     "symbol": "TEST",
     "tokenHolders": [
-      "0xd09cc3bc67e4294c4a446d8e4a2934a921410ed7",
-      "0x8FEa967fF3E8B14498BC17D8d43E8cdd614613c7",
-      "0x874Fec5f1D5045B85f46fBD2Be6264867c3D7cE5",
-      "0xf978cC95Eba88cC8869e580d282620e3b4382016",
-      "0x4fB9dEA18CDf6f737afDfc3f680Fb5500F8F893A",
-      "0xf17f52151EbEF6C7334FAD080c5704D77216b732",
-      "0xC5fdf4076b8F3A5357c5E395ab970B5B54098Fef",
-      "0x821aEa9a577a9b44299B9c15c88cf3087F3b5544",
-      "0x627306090abaB3A6e1400e9345bC60c78a8BEf57"
+      "0x627306090abab3a6e1400e9345bc60c78a8bef57",
+      "0xf17f52151ebef6c7334fad080c5704d77216b732",
+      "0xc5fdf4076b8f3a5357c5e395ab970b5b54098fef",
+      "0x821aea9a577a9b44299b9c15c88cf3087f3b5544",
+      "0x0d1d4e623d10f9fba5db95830f7d3839406c6af2",
+      "0x2932b7a2355d6fecc4b5c0b6bd44cc31df247a2e",
+      "0x2191ef87e392377ec08e7c08eb105ef5448eced5",
+      "0x0f4f2ac550a1b4e2280d04c21cea7ebd822934b5",
+      "0x6330a553fc93768f612722bb8c2ec78ac90b3bbc",
+      "0x5aeda56215b167893e80b4fe645ba6d5bab767de"
     ]
   }
 }
