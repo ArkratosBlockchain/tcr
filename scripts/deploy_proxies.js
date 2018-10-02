@@ -88,6 +88,15 @@ module.exports = (done) => {
     }));
     /* eslint-enable no-console */
 
+    // allow registry to spend token for token holders
+    for (let i=0; i<config.token.tokenHolders.length; i++) {
+      tokenProxy.approve(registry, 100)
+    }
+
+    for (let i=0; i<10; i++) {
+      registryProxy.apply(i, i, i.toString())
+    }
+
     return true;
   }
 
