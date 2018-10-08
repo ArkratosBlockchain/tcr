@@ -95,6 +95,7 @@ module.exports = (done) => {
 
     for (let i=0; i<10; i++) {
       registryProxy.apply(i, i, i.toString())
+      registryProxy.challenge(i, i.toString())
     }
 
     return true;
