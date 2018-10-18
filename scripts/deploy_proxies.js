@@ -1,10 +1,12 @@
 /* global artifacts web3 */
 const fs = require('fs');
 const BN = require('bignumber.js');
+const ethabi = require('ethereumjs-abi');
 
 const RegistryFactory = artifacts.require('RegistryFactory.sol');
 const Registry = artifacts.require('Registry.sol');
 const Token = artifacts.require('EIP20.sol');
+const Voting = artifacts.require('PLCRVoting.sol');
 
 const config = JSON.parse(fs.readFileSync('../conf/config.json'));
 const paramConfig = config.paramDefaults;
@@ -64,6 +66,19 @@ module.exports = (done) => {
     const tokenProxy = await Token.at(token);
     const registryName = await registryProxy.name.call();
 
+    const evenTokenDispensation =
+      new BN(config.token.supply).div(config.token.tokenHolders.length).toString();
+    console.log(`Dispensing ${config.token.supply} tokens evenly to ${config.token.tokenHolders.length} addresses:`);
+    console.log('');
+
+    await Promise.all(config.token.tokenHolders.map(async (account) => {
+      console.log(`Transferring tokens to address: ${account}`);
+      return tokenProxy.transfer(account, evenTokenDispensation);
+    }));
+    /* eslint-enable no-console */
+
+    await applyVoteReveal(token, plcr, registry)
+
     /* eslint-disable no-console */
     console.log(`Proxy contracts successfully migrated to network_id: ${networkID}`);
     console.log('');
@@ -77,17 +92,102 @@ module.exports = (done) => {
     console.log(`     ${registry}`);
     console.log('');
 
-    const evenTokenDispensation =
-      new BN(config.token.supply).div(config.token.tokenHolders.length).toString();
-    console.log(`Dispensing ${config.token.supply} tokens evenly to ${config.token.tokenHolders.length} addresses:`);
-    console.log('');
+    return true;
+  }
 
-    await Promise.all(config.token.tokenHolders.map(async (account) => {
-      console.log(`Transferring tokens to address: ${account}`);
-      return tokenProxy.transfer(account, evenTokenDispensation);
-    }));
-    /* eslint-enable no-console */
+  async function applyVoteReveal(tokenAddress, votingAddress, registryAddress) {
 
+    const tokenProxy = await Token.at(tokenAddress)
+    const votingProxy = await Voting.at(votingAddress)
+    const registryProxy = await Registry.at(registryAddress)
+
+    let pollIds = []
+
+    const appPerHolder = 1
+    const totalApp = appPerHolder * config.token.tokenHolders.length
+
+    // allow registry to spend token for token holders
+    for (let i=0; i<config.token.tokenHolders.length; i++) {
+      let rcpt = await tokenProxy.approve(registryAddress, 100, {from: config.token.tokenHolders[i]})
+      console.log('rcpt', rcpt.logs[0].args)
+      let rcpt2 = await tokenProxy.approve(votingAddress, 100, {from: config.token.tokenHolders[i]})
+      console.log('rcpt2', rcpt2.logs[0].args)
+      let rcpt3 = await votingProxy.requestVotingRights(100, {from: config.token.tokenHolders[i]})
+      console.log('rcpt3', rcpt3.logs[0].args)
+
+      let balance = await tokenProxy.balanceOf(config.token.tokenHolders[i])
+      console.log('balance', balance / 1e18)
+    }
+    // apply for listing
+    for (let i=0; i<config.token.tokenHolders.length; i++) {
+      for (let j=0; j<appPerHolder; j++) {
+
+        let id = (i*appPerHolder)+j
+        let hash = web3.sha3(id.toString())
+        console.log(id, hash, await registryProxy.isWhitelisted(hash), await registryProxy.appWasMade(hash))
+        let regRcpt = await registryProxy.apply(hash, config.paramDefaults.minDeposit, id.toString(), {from: config.token.tokenHolders[i]})
+        // console.log('regRcpt', regRcpt)
+        let pollRcpt = await registryProxy.challenge(hash, id.toString(), {from: config.token.tokenHolders[i]})
+        console.log('pollRcpt', pollRcpt.logs[0].args)
+
+        let challengeId = pollRcpt.logs[0].args.challengeID.toNumber()
+        console.log('challengeId', challengeId)
+
+        pollIds.push(challengeId)
+      }
+    }
+
+    // start voting
+    for (let i=0; i<totalApp; i++) {
+      for (let j=0; j<config.token.tokenHolders.length; j++) {
+        console.log('vote', pollIds[i])
+        // let hash = web3.sha3((j%2).toString(), {encoding: "hex"})
+        // requires sha3 that hashes the same as solidity
+        let hash = '0x' + ethabi.soliditySHA3(['uint', 'uint'], [(j%2), 0]).toString('hex')
+        let receipt = await votingProxy.commitVote(pollIds[i], hash, config.paramDefaults.minDeposit, 0, {from: config.token.tokenHolders[j]})
+        // console.log('commitVote', receipt)
+      }
+    }
+
+    // fast forward to end commit period
+    web3.currentProvider.send({jsonrpc: "2.0", method: "evm_increaseTime", params: [config.paramDefaults.commitStageLength], id: 0})
+    web3.currentProvider.send({jsonrpc: "2.0", method: "evm_mine", params: [], id: 0})
+
+    // start revealing
+    for (let i=0; i<totalApp; i++) {
+      for (let j=0; j<config.token.tokenHolders.length; j++) {
+        console.log('reveal', pollIds[i], await votingProxy.revealPeriodActive(pollIds[i], {from: config.token.tokenHolders[j]}))
+        let receipt = await votingProxy.revealVote(pollIds[i], j%2, 0, {from: config.token.tokenHolders[j]})
+      }
+    }
+
+    // fast forward to end reveal period
+    web3.currentProvider.send({jsonrpc: "2.0", method: "evm_increaseTime", params: [config.paramDefaults.revealStageLength], id: 0})
+    web3.currentProvider.send({jsonrpc: "2.0", method: "evm_mine", params: [], id: 0})
+
+    // resolve challenge
+    for (let i=0; i<totalApp; i++) {
+      console.log('resolve', i)
+      let hash = web3.sha3(i.toString())
+      console.log(i, hash, await registryProxy.challengeExists(hash), await registryProxy.challengeCanBeResolved(hash))
+      let receipt = await registryProxy.updateStatus(hash)
+    }
+
+    // start claiming
+    for (let i=0; i<totalApp; i++) {
+      for (let j=0; j<config.token.tokenHolders.length; j++) {
+        console.log('claim', pollIds[i])
+        console.log(await votingProxy.pollEnded(pollIds[i]))
+        try {
+          console.log(await votingProxy.getNumPassingTokens(config.token.tokenHolders[j], pollIds[i]))
+          let receipt = await registryProxy.claimReward(pollIds[i], {from: config.token.tokenHolders[j]})
+          console.log(receipt)
+        } catch (error) {
+          console.log(error)
+        }
+      }
+    }
+    
     return true;
   }
 

@@ -1,7 +1,7 @@
 {
   "paramDefaults": {
-    "minDeposit": 1,
-    "pMinDeposit": 1,
+    "minDeposit": 10,
+    "pMinDeposit": 10,
     "applyStageLength": 3600,
     "pApplyStageLength": 3600,
     "commitStageLength": 3600,
