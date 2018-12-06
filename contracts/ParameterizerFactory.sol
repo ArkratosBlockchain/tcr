@@ -1,9 +1,9 @@
 pragma solidity ^0.4.20;
 
-import "plcr-revival/PLCRFactory.sol";
-import "plcr-revival/PLCRVoting.sol";
+import "../../PLCRVoting/contracts/PLCRFactory.sol";
+import "../../PLCRVoting/contracts/PLCRVoting.sol";
 import "./Parameterizer.sol";
-import "tokens/eip20/EIP20.sol";
+import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 
 contract ParameterizerFactory {
 
@@ -23,12 +23,12 @@ contract ParameterizerFactory {
     /*
     @dev deploys and initializes a new Parameterizer contract that consumes a token at an address
     supplied by the user.
-    @param _token             an EIP20 token to be consumed by the new Parameterizer contract
+    @param _token             an ERC20 token to be consumed by the new Parameterizer contract
     @param _plcr              a PLCR voting contract to be consumed by the new Parameterizer contract
     @param _parameters        array of canonical parameters
     */
     function newParameterizerBYOToken(
-        EIP20 _token,
+        ERC20 _token,
         uint[] _parameters
     ) public returns (Parameterizer) {
         PLCRVoting plcr = plcrFactory.newPLCRBYOToken(_token);
@@ -44,36 +44,36 @@ contract ParameterizerFactory {
     }
 
     /*
-    @dev deploys and initializes new EIP20, PLCRVoting, and Parameterizer contracts
-    @param _supply            the total number of tokens to mint in the EIP20 contract
-    @param _name              the name of the new EIP20 token
-    @param _decimals          the decimal precision to be used in rendering balances in the EIP20 token
-    @param _symbol            the symbol of the new EIP20 token
+    @dev deploys and initializes new ERC20, PLCRVoting, and Parameterizer contracts
+    @param _supply            the total number of tokens to mint in the ERC20 contract
+    @param _name              the name of the new ERC20 token
+    @param _decimals          the decimal precision to be used in rendering balances in the ERC20 token
+    @param _symbol            the symbol of the new ERC20 token
     @param _parameters        array of canonical parameters
     */
-    function newParameterizerWithToken(
-        uint _supply,
-        string _name,
-        uint8 _decimals,
-        string _symbol,
-        uint[] _parameters
-    ) public returns (Parameterizer) {
-        // Creates a new EIP20 token & transfers the supply to creator (msg.sender)
-        // Deploys & initializes a new PLCRVoting contract
-        PLCRVoting plcr = plcrFactory.newPLCRWithToken(_supply, _name, _decimals, _symbol);
-        EIP20 token = EIP20(plcr.token());
-        token.transfer(msg.sender, _supply);
+    // function newParameterizerWithToken(
+    //     uint _supply,
+    //     string _name,
+    //     uint8 _decimals,
+    //     string _symbol,
+    //     uint[] _parameters
+    // ) public returns (Parameterizer) {
+    //     // Creates a new ERC20 token & transfers the supply to creator (msg.sender)
+    //     // Deploys & initializes a new PLCRVoting contract
+    //     PLCRVoting plcr = plcrFactory.newPLCRWithToken(_supply, _name, _decimals, _symbol);
+    //     ERC20 token = ERC20(plcr.token());
+    //     token.transfer(msg.sender, _supply);
 
-        // Create & initialize a new Parameterizer contract
-        Parameterizer parameterizer = Parameterizer(proxyFactory.createProxy(canonizedParameterizer, ""));
-        parameterizer.init(
-            token,
-            plcr,
-            _parameters
-        );
+    //     // Create & initialize a new Parameterizer contract
+    //     Parameterizer parameterizer = Parameterizer(proxyFactory.createProxy(canonizedParameterizer, ""));
+    //     parameterizer.init(
+    //         token,
+    //         plcr,
+    //         _parameters
+    //     );
 
-        emit NewParameterizer(msg.sender, token, plcr, parameterizer);
-        return parameterizer;
-    }
+    //     emit NewParameterizer(msg.sender, token, plcr, parameterizer);
+    //     return parameterizer;
+    // }
 }
 

@@ -1,8 +1,8 @@
 pragma solidity^0.4.11;
 
-import "plcr-revival/PLCRVoting.sol";
-import "tokens/eip20/EIP20Interface.sol";
-import "zeppelin/math/SafeMath.sol";
+import "../../PLCRVoting/contracts/PLCRVoting.sol";
+import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 
 contract Parameterizer {
 
@@ -57,7 +57,7 @@ contract Parameterizer {
     mapping(bytes32 => ParamProposal) public proposals;
 
     // Global Variables
-    EIP20Interface public token;
+    ERC20 public token;
     PLCRVoting public voting;
     uint public PROCESSBY = 604800; // 7 days
 
@@ -75,7 +75,7 @@ contract Parameterizer {
         require(_token != 0 && address(token) == 0);
         require(_plcr != 0 && address(voting) == 0);
 
-        token = EIP20Interface(_token);
+        token = ERC20(_token);
         voting = PLCRVoting(_plcr);
 
         // minimum deposit for listing to be whitelisted

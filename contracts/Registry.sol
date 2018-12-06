@@ -1,9 +1,9 @@
 pragma solidity ^0.4.11;
 
-import "tokens/eip20/EIP20Interface.sol";
+import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "./Parameterizer.sol";
-import "plcr-revival/PLCRVoting.sol";
-import "zeppelin/math/SafeMath.sol";
+import "../../PLCRVoting/contracts/PLCRVoting.sol";
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 
 contract Registry {
 
@@ -53,7 +53,7 @@ contract Registry {
     mapping(bytes32 => Listing) public listings;
 
     // Global Variables
-    EIP20Interface public token;
+    ERC20 public token;
     PLCRVoting public voting;
     Parameterizer public parameterizer;
     string public name;
@@ -67,7 +67,7 @@ contract Registry {
         require(_voting != 0 && address(voting) == 0);
         require(_parameterizer != 0 && address(parameterizer) == 0);
 
-        token = EIP20Interface(_token);
+        token = ERC20(_token);
         voting = PLCRVoting(_voting);
         parameterizer = Parameterizer(_parameterizer);
         name = _name;
