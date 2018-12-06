@@ -4,6 +4,7 @@ pragma solidity ^0.4.11;
 // files for the test pipeline.
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "../../PLCRVoting/contracts/PLCRFactory.sol";
+import "../../../kratos-ico-smart-contract/contracts/KratosToken.sol";
 
 contract Migrations {
   address public owner;

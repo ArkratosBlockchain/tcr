@@ -1,14 +1,17 @@
-/* global artifacts web3 */
+  /* global artifacts web3 */
 const fs = require('fs');
 const BN = require('bignumber.js');
 const ethabi = require('ethereumjs-abi');
 
 const RegistryFactory = artifacts.require('RegistryFactory.sol');
 const Registry = artifacts.require('Registry.sol');
-const Token = artifacts.require('EIP20.sol');
+const Token = artifacts.require('KratosToken.sol');
 const Voting = artifacts.require('PLCRVoting.sol');
 
 const config = JSON.parse(fs.readFileSync('../conf/config.json'));
+console.log(config)
+// override with accounts from own node
+config.token.tokenHolders = web3.eth.accounts.slice(0, 10)
 const paramConfig = config.paramDefaults;
 
 module.exports = (done) => {
@@ -31,11 +34,9 @@ module.exports = (done) => {
     /* eslint-enable no-console */
 
     const registryFactory = await RegistryFactory.at(registryFactoryAddress);
-    const registryReceipt = await registryFactory.newRegistryWithToken(
-      config.token.supply,
-      config.token.name,
-      config.token.decimals,
-      config.token.symbol,
+
+    const registryReceipt = await registryFactory.newRegistryBYOToken(
+      Token.address,
       [
         paramConfig.minDeposit,
         paramConfig.pMinDeposit,
@@ -53,8 +54,31 @@ module.exports = (done) => {
         paramConfig.exitPeriodLen,
       ],
       config.name,
-    );
-
+    )
+    // const registryReceipt = await registryFactory.newRegistryWithToken(
+    //   config.token.supply,
+    //   config.token.name,
+    //   config.token.decimals,
+    //   config.token.symbol,
+    //   [
+    //     paramConfig.minDeposit,
+    //     paramConfig.pMinDeposit,
+    //     paramConfig.applyStageLength,
+    //     paramConfig.pApplyStageLength,
+    //     paramConfig.commitStageLength,
+    //     paramConfig.pCommitStageLength,
+    //     paramConfig.revealStageLength,
+    //     paramConfig.pRevealStageLength,
+    //     paramConfig.dispensationPct,
+    //     paramConfig.pDispensationPct,
+    //     paramConfig.voteQuorum,
+    //     paramConfig.pVoteQuorum,
+    //     paramConfig.exitTimeDelay,
+    //     paramConfig.exitPeriodLen,
+    //   ],
+    //   config.name,
+    // );
+console.log(registryReceipt.logs)
     const {
       token,
       plcr,
@@ -62,19 +86,20 @@ module.exports = (done) => {
       registry,
     } = registryReceipt.logs[0].args;
 
-    const registryProxy = await Registry.at(registry);
     const tokenProxy = await Token.at(token);
+    const registryProxy = await Registry.at(registry);
     const registryName = await registryProxy.name.call();
 
+console.log(await tokenProxy.totalSupply.call())
     const evenTokenDispensation =
-      new BN(config.token.supply).div(config.token.tokenHolders.length).toString();
+      new BN(await tokenProxy.totalSupply.call()).div(config.token.tokenHolders.length).toString();
     console.log(`Dispensing ${config.token.supply} tokens evenly to ${config.token.tokenHolders.length} addresses:`);
-    console.log('');
 
-    await Promise.all(config.token.tokenHolders.map(async (account) => {
+    let result = await Promise.all(config.token.tokenHolders.map(async (account) => {
       console.log(`Transferring tokens to address: ${account}`);
-      return tokenProxy.transfer(account, evenTokenDispensation);
+      return await tokenProxy.transfer(account, evenTokenDispensation);
     }));
+    console.log(result)
     /* eslint-enable no-console */
 
     await applyVoteReveal(token, plcr, registry)
@@ -82,7 +107,7 @@ module.exports = (done) => {
     /* eslint-disable no-console */
     console.log(`Proxy contracts successfully migrated to network_id: ${networkID}`);
     console.log('');
-    console.log(`${config.token.name} (EIP20):`);
+    console.log(`${config.token.name} (ERC20):`);
     console.log(`     ${token}`);
     console.log('PLCRVoting:');
     console.log(`     ${plcr}`);
@@ -97,6 +122,10 @@ module.exports = (done) => {
 
   async function applyVoteReveal(tokenAddress, votingAddress, registryAddress) {
 
+    console.log(tokenAddress)
+    console.log(votingAddress)
+    console.log(registryAddress)
+
     const tokenProxy = await Token.at(tokenAddress)
     const votingProxy = await Voting.at(votingAddress)
     const registryProxy = await Registry.at(registryAddress)
@@ -108,19 +137,25 @@ module.exports = (done) => {
 
     // allow registry to spend token for token holders
     for (let i=0; i<config.token.tokenHolders.length; i++) {
+
+      console.log('start', i, config.token.tokenHolders[i])
+      console.log('nonce', web3.eth.getTransactionCount(config.token.tokenHolders[0]))
+
+      let balance = await tokenProxy.balanceOf(config.token.tokenHolders[i])
+      console.log('balance', balance / 1e18)
+
       let rcpt = await tokenProxy.approve(registryAddress, 100, {from: config.token.tokenHolders[i]})
       console.log('rcpt', rcpt.logs[0].args)
       let rcpt2 = await tokenProxy.approve(votingAddress, 100, {from: config.token.tokenHolders[i]})
       console.log('rcpt2', rcpt2.logs[0].args)
       let rcpt3 = await votingProxy.requestVotingRights(100, {from: config.token.tokenHolders[i]})
       console.log('rcpt3', rcpt3.logs[0].args)
-
-      let balance = await tokenProxy.balanceOf(config.token.tokenHolders[i])
-      console.log('balance', balance / 1e18)
     }
     // apply for listing
     for (let i=0; i<config.token.tokenHolders.length; i++) {
       for (let j=0; j<appPerHolder; j++) {
+
+        console.log(i, j)
 
         let id = (i*appPerHolder)+j
         let hash = web3.sha3(id.toString())
@@ -144,6 +179,10 @@ module.exports = (done) => {
         // let hash = web3.sha3((j%2).toString(), {encoding: "hex"})
         // requires sha3 that hashes the same as solidity
         let hash = '0x' + ethabi.soliditySHA3(['uint', 'uint'], [(j%2), 0]).toString('hex')
+        console.log(pollIds[i], typeof(pollIds[i]))
+        console.log(hash, typeof(hash))
+        console.log(config.paramDefaults.minDeposit, typeof(config.paramDefaults.minDeposit))
+        console.log(config.token.tokenHolders[j], typeof(config.token.tokenHolders[j]))
         let receipt = await votingProxy.commitVote(pollIds[i], hash, config.paramDefaults.minDeposit, 0, {from: config.token.tokenHolders[j]})
         // console.log('commitVote', receipt)
       }
@@ -196,6 +235,7 @@ module.exports = (done) => {
     if (err) {
       return done(err); // truffle exec exits if an error gets returned
     }
+    
     return deployProxies(network).then(() => done());
   });
 };
