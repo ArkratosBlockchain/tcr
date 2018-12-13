@@ -35,10 +35,12 @@ module.exports = {
       gasPrice: 25000000000,
     },
     ropsten: {
-      provider: () => new HDWalletProvider(mnemonic, 'https://ropsten.infura.io'),
-      network_id: '*',
-      gas: 4500000,
-      gasPrice: 25000000000,
+      host: 'localhost',
+      port: 8545,
+      // provider: () => new HDWalletProvider(mnemonic, 'https://ropsten.infura.io'),
+      network_id: '3',
+      gas: 8000000,
+      gasPrice: 10000000000,
     },
     // config for solidity-coverage
     coverage: {
