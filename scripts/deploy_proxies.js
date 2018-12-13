@@ -139,7 +139,6 @@ console.log(await tokenProxy.totalSupply.call())
     for (let i=0; i<config.token.tokenHolders.length; i++) {
 
       console.log('start', i, config.token.tokenHolders[i])
-      console.log('nonce', web3.eth.getTransactionCount(config.token.tokenHolders[0]))
 
       let balance = await tokenProxy.balanceOf(config.token.tokenHolders[i])
       console.log('balance', balance / 1e18)
@@ -169,6 +168,9 @@ console.log(await tokenProxy.totalSupply.call())
         console.log('challengeId', challengeId)
 
         pollIds.push(challengeId)
+
+        // allow all tokenHolders to vote
+        await votingProxy.allowVoters(challengeId, config.token.tokenHolders)
       }
     }
 
@@ -180,9 +182,7 @@ console.log(await tokenProxy.totalSupply.call())
         // requires sha3 that hashes the same as solidity
         let hash = '0x' + ethabi.soliditySHA3(['uint', 'uint'], [(j%2), 0]).toString('hex')
         console.log(pollIds[i], typeof(pollIds[i]))
-        console.log(hash, typeof(hash))
-        console.log(config.paramDefaults.minDeposit, typeof(config.paramDefaults.minDeposit))
-        console.log(config.token.tokenHolders[j], typeof(config.token.tokenHolders[j]))
+        console.log(j, config.token.tokenHolders[j], typeof(config.token.tokenHolders[j]))
         let receipt = await votingProxy.commitVote(pollIds[i], hash, config.paramDefaults.minDeposit, 0, {from: config.token.tokenHolders[j]})
         // console.log('commitVote', receipt)
       }
