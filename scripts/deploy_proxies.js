@@ -90,19 +90,23 @@ console.log(registryReceipt.logs)
     const registryProxy = await Registry.at(registry);
     const registryName = await registryProxy.name.call();
 
-console.log(await tokenProxy.totalSupply.call())
-    const evenTokenDispensation =
-      new BN(await tokenProxy.totalSupply.call()).div(config.token.tokenHolders.length).toString();
-    console.log(`Dispensing ${config.token.supply} tokens evenly to ${config.token.tokenHolders.length} addresses:`);
+    // START :: this section is more for testing. 
+    if (networkID > 999) {
+  console.log(await tokenProxy.totalSupply.call())
+      const evenTokenDispensation =
+        new BN(await tokenProxy.totalSupply.call()).div(config.token.tokenHolders.length).toString();
+      console.log(`Dispensing ${config.token.supply} tokens evenly to ${config.token.tokenHolders.length} addresses:`);
 
-    let result = await Promise.all(config.token.tokenHolders.map(async (account) => {
-      console.log(`Transferring tokens to address: ${account}`);
-      return await tokenProxy.transfer(account, evenTokenDispensation);
-    }));
-    console.log(result)
-    /* eslint-enable no-console */
+      let result = await Promise.all(config.token.tokenHolders.map(async (account) => {
+        console.log(`Transferring tokens to address: ${account}`);
+        return tokenProxy.transfer(account, evenTokenDispensation);
+      }));
+      console.log('result')
+      /* eslint-enable no-console */
 
-    await applyVoteReveal(token, plcr, registry)
+      await applyVoteReveal(token, plcr, registry)
+    }
+    // END :: section ends
 
     /* eslint-disable no-console */
     console.log(`Proxy contracts successfully migrated to network_id: ${networkID}`);
