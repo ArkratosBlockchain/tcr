@@ -92,18 +92,20 @@ console.log(registryReceipt.logs)
 
     // START :: this section is more for testing. 
     if (networkID > 999) {
-  console.log(await tokenProxy.totalSupply.call())
-      const evenTokenDispensation =
-        new BN(await tokenProxy.totalSupply.call()).div(config.token.tokenHolders.length).toString();
-      console.log(`Dispensing ${config.token.supply} tokens evenly to ${config.token.tokenHolders.length} addresses:`);
+      console.log(await tokenProxy.totalSupply.call())
 
-      let result = await Promise.all(config.token.tokenHolders.map(async (account) => {
-        console.log(`Transferring tokens to address: ${account}`);
-        return tokenProxy.transfer(account, evenTokenDispensation);
-      }));
-      console.log('result')
-      /* eslint-enable no-console */
+      // don't do auto distribution on mainnet
+      if (networkID > 1) {
+        const evenTokenDispensation = new BN(await tokenProxy.totalSupply.call()).div(config.token.tokenHolders.length).toString();
+        console.log(`Dispensing ${config.token.supply} tokens evenly to ${config.token.tokenHolders.length} addresses:`);
 
+        let result = await Promise.all(config.token.tokenHolders.map(async (account) => {
+          console.log(`Transferring tokens to address: ${account}`);
+          return tokenProxy.transfer(account, evenTokenDispensation);
+        }));
+        console.log('result')
+        /* eslint-enable no-console */
+      }
       await applyVoteReveal(token, plcr, registry)
     }
     // END :: section ends
@@ -178,58 +180,58 @@ console.log(registryReceipt.logs)
       }
     }
 
-    // start voting
-    for (let i=0; i<totalApp; i++) {
-      for (let j=0; j<config.token.tokenHolders.length; j++) {
-        console.log('vote', pollIds[i])
-        // let hash = web3.sha3((j%2).toString(), {encoding: "hex"})
-        // requires sha3 that hashes the same as solidity
-        let hash = '0x' + ethabi.soliditySHA3(['uint', 'uint'], [(j%2), 0]).toString('hex')
-        console.log(pollIds[i], typeof(pollIds[i]))
-        console.log(j, config.token.tokenHolders[j], typeof(config.token.tokenHolders[j]))
-        let receipt = await votingProxy.commitVote(pollIds[i], hash, config.paramDefaults.minDeposit, 0, {from: config.token.tokenHolders[j]})
-        // console.log('commitVote', receipt)
-      }
-    }
+    // // start voting
+    // for (let i=0; i<totalApp; i++) {
+    //   for (let j=0; j<config.token.tokenHolders.length; j++) {
+    //     console.log('vote', pollIds[i])
+    //     // let hash = web3.sha3((j%2).toString(), {encoding: "hex"})
+    //     // requires sha3 that hashes the same as solidity
+    //     let hash = '0x' + ethabi.soliditySHA3(['uint', 'uint'], [(j%2), 0]).toString('hex')
+    //     console.log(pollIds[i], typeof(pollIds[i]))
+    //     console.log(j, config.token.tokenHolders[j], typeof(config.token.tokenHolders[j]))
+    //     let receipt = await votingProxy.commitVote(pollIds[i], hash, config.paramDefaults.minDeposit, 0, {from: config.token.tokenHolders[j]})
+    //     // console.log('commitVote', receipt)
+    //   }
+    // }
 
-    // fast forward to end commit period
-    web3.currentProvider.send({jsonrpc: "2.0", method: "evm_increaseTime", params: [config.paramDefaults.commitStageLength], id: 0})
-    web3.currentProvider.send({jsonrpc: "2.0", method: "evm_mine", params: [], id: 0})
+    // // fast forward to end commit period
+    // web3.currentProvider.send({jsonrpc: "2.0", method: "evm_increaseTime", params: [config.paramDefaults.commitStageLength], id: 0})
+    // web3.currentProvider.send({jsonrpc: "2.0", method: "evm_mine", params: [], id: 0})
 
-    // start revealing
-    for (let i=0; i<totalApp; i++) {
-      for (let j=0; j<config.token.tokenHolders.length; j++) {
-        console.log('reveal', pollIds[i], await votingProxy.revealPeriodActive(pollIds[i], {from: config.token.tokenHolders[j]}))
-        let receipt = await votingProxy.revealVote(pollIds[i], j%2, 0, {from: config.token.tokenHolders[j]})
-      }
-    }
+    // // start revealing
+    // for (let i=0; i<totalApp; i++) {
+    //   for (let j=0; j<config.token.tokenHolders.length; j++) {
+    //     console.log('reveal', pollIds[i], await votingProxy.revealPeriodActive(pollIds[i], {from: config.token.tokenHolders[j]}))
+    //     let receipt = await votingProxy.revealVote(pollIds[i], j%2, 0, {from: config.token.tokenHolders[j]})
+    //   }
+    // }
 
-    // fast forward to end reveal period
-    web3.currentProvider.send({jsonrpc: "2.0", method: "evm_increaseTime", params: [config.paramDefaults.revealStageLength], id: 0})
-    web3.currentProvider.send({jsonrpc: "2.0", method: "evm_mine", params: [], id: 0})
+    // // fast forward to end reveal period
+    // web3.currentProvider.send({jsonrpc: "2.0", method: "evm_increaseTime", params: [config.paramDefaults.revealStageLength], id: 0})
+    // web3.currentProvider.send({jsonrpc: "2.0", method: "evm_mine", params: [], id: 0})
 
-    // resolve challenge
-    for (let i=0; i<totalApp; i++) {
-      console.log('resolve', i)
-      let hash = web3.sha3(i.toString())
-      console.log(i, hash, await registryProxy.challengeExists(hash), await registryProxy.challengeCanBeResolved(hash))
-      let receipt = await registryProxy.updateStatus(hash)
-    }
+    // // resolve challenge
+    // for (let i=0; i<totalApp; i++) {
+    //   console.log('resolve', i)
+    //   let hash = web3.sha3(i.toString())
+    //   console.log(i, hash, await registryProxy.challengeExists(hash), await registryProxy.challengeCanBeResolved(hash))
+    //   let receipt = await registryProxy.updateStatus(hash)
+    // }
 
-    // start claiming
-    for (let i=0; i<totalApp; i++) {
-      for (let j=0; j<config.token.tokenHolders.length; j++) {
-        console.log('claim', pollIds[i])
-        console.log(await votingProxy.pollEnded(pollIds[i]))
-        try {
-          console.log(await votingProxy.getNumPassingTokens(config.token.tokenHolders[j], pollIds[i]))
-          let receipt = await registryProxy.claimReward(pollIds[i], {from: config.token.tokenHolders[j]})
-          console.log(receipt)
-        } catch (error) {
-          console.log(error)
-        }
-      }
-    }
+    // // start claiming
+    // for (let i=0; i<totalApp; i++) {
+    //   for (let j=0; j<config.token.tokenHolders.length; j++) {
+    //     console.log('claim', pollIds[i])
+    //     console.log(await votingProxy.pollEnded(pollIds[i]))
+    //     try {
+    //       console.log(await votingProxy.getNumPassingTokens(config.token.tokenHolders[j], pollIds[i]))
+    //       let receipt = await registryProxy.claimReward(pollIds[i], {from: config.token.tokenHolders[j]})
+    //       console.log(receipt)
+    //     } catch (error) {
+    //       console.log(error)
+    //     }
+    //   }
+    // }
     
     return true;
   }
