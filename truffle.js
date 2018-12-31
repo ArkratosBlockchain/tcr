@@ -13,6 +13,11 @@ if (process.env.MNEMONIC) {
 }
 
 module.exports = {
+  compilers: {
+    solc: {
+        version: "0.4.24"
+    }
+  },
   networks: {
     mainnet: {
       provider: () => new HDWalletProvider(mnemonic, 'https://mainnet.infura.io'),
@@ -35,12 +40,8 @@ module.exports = {
       gasPrice: 25000000000,
     },
     ropsten: {
-      host: '10.8.2.177',
-      port: 9966,
-      // provider: () => new HDWalletProvider(mnemonic, 'https://ropsten.infura.io'),
+      provider: () => new HDWalletProvider(mnemonic, 'https://ropsten.infura.io/LjKEqau6MKZzYWdDiwSo', 0, 10),
       network_id: '3',
-      gas: 8000000,
-      gasPrice: 100000000000,
     },
     // config for solidity-coverage
     coverage: {

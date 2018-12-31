@@ -10,121 +10,122 @@ const Voting = artifacts.require('PLCRVoting.sol');
 
 const config = JSON.parse(fs.readFileSync('../conf/config.json'));
 console.log(config)
-// override with accounts from own node
-config.token.tokenHolders = web3.eth.accounts.slice(0, 10)
 const paramConfig = config.paramDefaults;
 
-module.exports = (done) => {
-  async function deployProxies(networkID) {
-    let registryFactoryAddress;
-    if (networkID === '1') {
-      registryFactoryAddress = '0xcc0df91b86795f21c3d43dbeb3ede0dfcf8dccaf'; // mainnet
-    } else if (networkID === '4') {
-      registryFactoryAddress = '0x2bddfc0c506a00ea3a6ccea5fbbda8843377dcb1'; // rinkeby
-    } else {
-      registryFactoryAddress = RegistryFactory.address; // development
-    }
+module.exports = async (done) => {
 
-    /* eslint-disable no-console */
-    console.log('Using RegistryFactory at:');
-    console.log(`     ${registryFactoryAddress}`);
-    console.log('');
-    console.log('Deploying proxy contracts...');
-    console.log('...');
-    /* eslint-enable no-console */
+  const networkID = await web3.eth.net.getId()
+  console.log('networkID', networkID)
 
-    const registryFactory = await RegistryFactory.at(registryFactoryAddress);
+  // override with accounts from own node
+  config.token.tokenHolders = (await web3.eth.getAccounts()).slice(0, 10)
 
-    const registryReceipt = await registryFactory.newRegistryBYOToken(
-      Token.address,
-      [
-        paramConfig.minDeposit,
-        paramConfig.pMinDeposit,
-        paramConfig.applyStageLength,
-        paramConfig.pApplyStageLength,
-        paramConfig.commitStageLength,
-        paramConfig.pCommitStageLength,
-        paramConfig.revealStageLength,
-        paramConfig.pRevealStageLength,
-        paramConfig.dispensationPct,
-        paramConfig.pDispensationPct,
-        paramConfig.voteQuorum,
-        paramConfig.pVoteQuorum,
-        paramConfig.exitTimeDelay,
-        paramConfig.exitPeriodLen,
-      ],
-      config.name,
-    )
-    // const registryReceipt = await registryFactory.newRegistryWithToken(
-    //   config.token.supply,
-    //   config.token.name,
-    //   config.token.decimals,
-    //   config.token.symbol,
-    //   [
-    //     paramConfig.minDeposit,
-    //     paramConfig.pMinDeposit,
-    //     paramConfig.applyStageLength,
-    //     paramConfig.pApplyStageLength,
-    //     paramConfig.commitStageLength,
-    //     paramConfig.pCommitStageLength,
-    //     paramConfig.revealStageLength,
-    //     paramConfig.pRevealStageLength,
-    //     paramConfig.dispensationPct,
-    //     paramConfig.pDispensationPct,
-    //     paramConfig.voteQuorum,
-    //     paramConfig.pVoteQuorum,
-    //     paramConfig.exitTimeDelay,
-    //     paramConfig.exitPeriodLen,
-    //   ],
-    //   config.name,
-    // );
-console.log(registryReceipt.logs)
-    const {
-      token,
-      plcr,
-      parameterizer,
-      registry,
-    } = registryReceipt.logs[0].args;
-
-    const tokenProxy = await Token.at(token);
-    const registryProxy = await Registry.at(registry);
-    const registryName = await registryProxy.name.call();
-
-    // START :: this section is more for testing. 
-    if (networkID > 999) {
-      console.log(await tokenProxy.totalSupply.call())
-
-      // don't do auto distribution on mainnet
-      if (networkID > 1) {
-        const evenTokenDispensation = new BN(await tokenProxy.totalSupply.call()).div(config.token.tokenHolders.length).toString();
-        console.log(`Dispensing ${config.token.supply} tokens evenly to ${config.token.tokenHolders.length} addresses:`);
-
-        let result = await Promise.all(config.token.tokenHolders.map(async (account) => {
-          console.log(`Transferring tokens to address: ${account}`);
-          return tokenProxy.transfer(account, evenTokenDispensation);
-        }));
-        console.log('result')
-        /* eslint-enable no-console */
-      }
-      await applyVoteReveal(token, plcr, registry)
-    }
-    // END :: section ends
-
-    /* eslint-disable no-console */
-    console.log(`Proxy contracts successfully migrated to network_id: ${networkID}`);
-    console.log('');
-    console.log(`${config.token.name} (ERC20):`);
-    console.log(`     ${token}`);
-    console.log('PLCRVoting:');
-    console.log(`     ${plcr}`);
-    console.log('Parameterizer:');
-    console.log(`     ${parameterizer}`);
-    console.log(`${registryName} (Registry):`);
-    console.log(`     ${registry}`);
-    console.log('');
-
-    return true;
+  let registryFactoryAddress;
+  if (networkID === '1') {
+    registryFactoryAddress = '0xcc0df91b86795f21c3d43dbeb3ede0dfcf8dccaf'; // mainnet
+  } else if (networkID === '4') {
+    registryFactoryAddress = '0x2bddfc0c506a00ea3a6ccea5fbbda8843377dcb1'; // rinkeby
+  } else {
+    registryFactoryAddress = RegistryFactory.address; // development
   }
+
+  /* eslint-disable no-console */
+  console.log('Using RegistryFactory at:');
+  console.log(`     ${registryFactoryAddress}`);
+  console.log('');
+  console.log('Deploying proxy contracts...');
+  console.log('...');
+  /* eslint-enable no-console */
+
+  const registryFactory = await RegistryFactory.at(registryFactoryAddress);
+
+  const registryReceipt = await registryFactory.newRegistryBYOToken(
+    Token.address,
+    [
+      paramConfig.minDeposit,
+      paramConfig.pMinDeposit,
+      paramConfig.applyStageLength,
+      paramConfig.pApplyStageLength,
+      paramConfig.commitStageLength,
+      paramConfig.pCommitStageLength,
+      paramConfig.revealStageLength,
+      paramConfig.pRevealStageLength,
+      paramConfig.dispensationPct,
+      paramConfig.pDispensationPct,
+      paramConfig.voteQuorum,
+      paramConfig.pVoteQuorum,
+      paramConfig.exitTimeDelay,
+      paramConfig.exitPeriodLen,
+    ],
+    config.name,
+  )
+  // const registryReceipt = await registryFactory.newRegistryWithToken(
+  //   config.token.supply,
+  //   config.token.name,
+  //   config.token.decimals,
+  //   config.token.symbol,
+  //   [
+  //     paramConfig.minDeposit,
+  //     paramConfig.pMinDeposit,
+  //     paramConfig.applyStageLength,
+  //     paramConfig.pApplyStageLength,
+  //     paramConfig.commitStageLength,
+  //     paramConfig.pCommitStageLength,
+  //     paramConfig.revealStageLength,
+  //     paramConfig.pRevealStageLength,
+  //     paramConfig.dispensationPct,
+  //     paramConfig.pDispensationPct,
+  //     paramConfig.voteQuorum,
+  //     paramConfig.pVoteQuorum,
+  //     paramConfig.exitTimeDelay,
+  //     paramConfig.exitPeriodLen,
+  //   ],
+  //   config.name,
+  // );
+console.log(registryReceipt.logs)
+  const {
+    token,
+    plcr,
+    parameterizer,
+    registry,
+  } = registryReceipt.logs[0].args;
+
+  const tokenProxy = await Token.at(token);
+  const registryProxy = await Registry.at(registry);
+  const registryName = await registryProxy.name.call();
+
+  // START :: this section is more for testing. 
+  // if (networkID > 999) {
+    console.log(await tokenProxy.totalSupply.call())
+
+    // don't do auto distribution on mainnet
+    if (networkID > 1) {
+      const evenTokenDispensation = new BN(await tokenProxy.totalSupply.call()).div(config.token.tokenHolders.length).toString();
+      console.log(`Dispensing ${config.token.supply} tokens evenly to ${config.token.tokenHolders.length} addresses:`);
+
+      config.token.tokenHolders.map(async (account) => {
+        console.log(`Transferring tokens to address: ${account}`);
+        await tokenProxy.transfer(account, evenTokenDispensation);
+      })
+
+      /* eslint-enable no-console */
+    }
+    await applyVoteReveal(token, plcr, registry)
+  // }
+  // END :: section ends
+
+  /* eslint-disable no-console */
+  console.log(`Proxy contracts successfully migrated to network_id: ${networkID}`);
+  console.log('');
+  console.log(`${config.token.name} (ERC20):`);
+  console.log(`     ${token}`);
+  console.log('PLCRVoting:');
+  console.log(`     ${plcr}`);
+  console.log('Parameterizer:');
+  console.log(`     ${parameterizer}`);
+  console.log(`${registryName} (Registry):`);
+  console.log(`     ${registry}`);
+  console.log('');
 
   async function applyVoteReveal(tokenAddress, votingAddress, registryAddress) {
 
@@ -180,35 +181,35 @@ console.log(registryReceipt.logs)
       }
     }
 
-    // // start voting
-    // for (let i=0; i<totalApp; i++) {
-    //   for (let j=0; j<config.token.tokenHolders.length; j++) {
-    //     console.log('vote', pollIds[i])
-    //     // let hash = web3.sha3((j%2).toString(), {encoding: "hex"})
-    //     // requires sha3 that hashes the same as solidity
-    //     let hash = '0x' + ethabi.soliditySHA3(['uint', 'uint'], [(j%2), 0]).toString('hex')
-    //     console.log(pollIds[i], typeof(pollIds[i]))
-    //     console.log(j, config.token.tokenHolders[j], typeof(config.token.tokenHolders[j]))
-    //     let receipt = await votingProxy.commitVote(pollIds[i], hash, config.paramDefaults.minDeposit, 0, {from: config.token.tokenHolders[j]})
-    //     // console.log('commitVote', receipt)
-    //   }
-    // }
+    // start voting
+    for (let i=0; i<totalApp; i++) {
+      for (let j=0; j<config.token.tokenHolders.length; j++) {
+        console.log('vote', pollIds[i])
+        // let hash = web3.sha3((j%2).toString(), {encoding: "hex"})
+        // requires sha3 that hashes the same as solidity
+        let hash = '0x' + ethabi.soliditySHA3(['uint', 'uint'], [(j%2), 0]).toString('hex')
+        console.log(pollIds[i], typeof(pollIds[i]))
+        console.log(j, config.token.tokenHolders[j], typeof(config.token.tokenHolders[j]))
+        let receipt = await votingProxy.commitVote(pollIds[i], hash, config.paramDefaults.minDeposit, 0, {from: config.token.tokenHolders[j]})
+        // console.log('commitVote', receipt)
+      }
+    }
 
-    // // fast forward to end commit period
-    // web3.currentProvider.send({jsonrpc: "2.0", method: "evm_increaseTime", params: [config.paramDefaults.commitStageLength], id: 0})
-    // web3.currentProvider.send({jsonrpc: "2.0", method: "evm_mine", params: [], id: 0})
+    // fast forward to end commit period
+    web3.currentProvider.send({jsonrpc: "2.0", method: "evm_increaseTime", params: [config.paramDefaults.commitStageLength], id: 0})
+    web3.currentProvider.send({jsonrpc: "2.0", method: "evm_mine", params: [], id: 0})
 
-    // // start revealing
-    // for (let i=0; i<totalApp; i++) {
-    //   for (let j=0; j<config.token.tokenHolders.length; j++) {
-    //     console.log('reveal', pollIds[i], await votingProxy.revealPeriodActive(pollIds[i], {from: config.token.tokenHolders[j]}))
-    //     let receipt = await votingProxy.revealVote(pollIds[i], j%2, 0, {from: config.token.tokenHolders[j]})
-    //   }
-    // }
+    // start revealing
+    for (let i=0; i<totalApp; i++) {
+      for (let j=0; j<config.token.tokenHolders.length; j++) {
+        console.log('reveal', pollIds[i], await votingProxy.revealPeriodActive(pollIds[i], {from: config.token.tokenHolders[j]}))
+        let receipt = await votingProxy.revealVote(pollIds[i], j%2, 0, {from: config.token.tokenHolders[j]})
+      }
+    }
 
-    // // fast forward to end reveal period
-    // web3.currentProvider.send({jsonrpc: "2.0", method: "evm_increaseTime", params: [config.paramDefaults.revealStageLength], id: 0})
-    // web3.currentProvider.send({jsonrpc: "2.0", method: "evm_mine", params: [], id: 0})
+    // fast forward to end reveal period, only available in truffle development blockchain
+    web3.currentProvider.send({jsonrpc: "2.0", method: "evm_increaseTime", params: [config.paramDefaults.revealStageLength], id: 0})
+    web3.currentProvider.send({jsonrpc: "2.0", method: "evm_mine", params: [], id: 0})
 
     // // resolve challenge
     // for (let i=0; i<totalApp; i++) {
@@ -236,12 +237,5 @@ console.log(registryReceipt.logs)
     return true;
   }
 
-  // web3 requires callback syntax. silly!
-  web3.version.getNetwork((err, network) => {
-    if (err) {
-      return done(err); // truffle exec exits if an error gets returned
-    }
-    
-    return deployProxies(network).then(() => done());
-  });
+  done()
 };

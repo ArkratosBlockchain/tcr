@@ -32,7 +32,7 @@
     "ethjs-util": "0.1.4",
     "openzeppelin-solidity": "^1.12.0-rc.2",
     "truffle": "4.1.11",
-    "truffle-hdwallet-provider": "0.0.5"
+    "truffle-hdwallet-provider": "^1.0.1"
   },
   "devDependencies": {
     "eslint": "4.15.0",
